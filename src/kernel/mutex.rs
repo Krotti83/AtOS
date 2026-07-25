@@ -4,7 +4,7 @@
 use core::cell::Cell;
 use crate::kernel::spinlock::Spinlock;
 use crate::kernel::scheduler::Scheduler;
-use crate::kernel::processes::Process;
+use crate::kernel::processes::{BlockReason, Process};
 
 // Never in my life with C I've experienced so much bs that I have with Rust.
 // Thank you, Rust.
@@ -34,7 +34,9 @@ impl Mutex {
         while self.lock.get() {
             // We pass the address of this specific mutex instance as unique wait channel
             // This is the kind of code that keeps you up at night.
-            Scheduler::sleep(self as *const Mutex as *const (), &self.guard);
+            self.guard.release();
+            Scheduler::sleep(self as *const Mutex as *const (), BlockReason::Mutex);
+            self.guard.acquire();
         }
         self.lock.set(true);
         if let Some(proc) = Process::get_current() {

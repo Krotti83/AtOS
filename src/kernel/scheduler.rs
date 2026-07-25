@@ -1,9 +1,8 @@
 use core::panic;
 
 use crate::kernel::exceptions::ExceptionContext;
-use crate::kernel::processes::{Cpu, PROCESS_TABLE, ProcessContext, MAX_PROCESSES, ProcessState};
+use crate::kernel::processes::{BlockReason, Cpu, MAX_PROCESSES, PROCESS_TABLE, ProcessContext, ProcessState};
 use crate::kernel::timer::PhysicalTimer;
-use crate::kernel::spinlock::Spinlock;
 use crate::kernel::processes::Process;
 use crate::dprintln;
 use crate::the_end;
@@ -116,23 +115,16 @@ impl Scheduler {
         Self::reset_timer();
     }
 
-    pub fn sleep(channel: *const (), mutex_guard: &Spinlock) {
+    pub fn sleep(channel: *const (), reason: BlockReason) {
         unsafe {
             if let Some(current_process) = &mut PROCESS_TABLE[CURRENT_PROCESS] {
-                current_process.set_state(ProcessState::Blocked);
                 current_process.chan = channel as u64;
+                current_process.block_reason = Some(reason);
             } else {
                 panic!("Scheduler::sleep() was called when no process was active!");
             }
 
-            // Clear Cpu tracker because the process is no longer running
-            Cpu::current().clear_current_process();
-
-            mutex_guard.release();
-
             core::arch::asm!("svc #0");
-
-            mutex_guard.acquire(); // \REVIEW this will never be reached? 
         }
     }
 
@@ -145,6 +137,7 @@ impl Scheduler {
                 if let Some(process) = slot {
                     if process.state == ProcessState::Blocked && process.chan == channel_addr {
                         process.set_state(ProcessState::Ready);
+                        process.block_reason = None;
                         process.chan = 0;
                     }
                 }

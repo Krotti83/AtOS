@@ -1,5 +1,5 @@
 use crate::kernel::kernelstack::KernelStack;
-use crate::kernel::processes::ProcessContext;
+use crate::kernel::processes::{Cpu, ProcessContext, ProcessState};
 use crate::kernel::scheduler::Scheduler;
 use crate::{dprintln, println};
 use crate::kernel::syscalls;
@@ -101,6 +101,18 @@ fn handle_sync_exception(ctx: &mut ExceptionContext) -> () {
     match ctx.esource {
         ExceptionSource::_EL1h => {
             if exception_class == 0x15 && (ctx.esr & 0xffff) == 0 {
+
+                // if svc happened while a process was running then save pctx
+                if let Some(current_process) = Scheduler::get_current_process() {
+                    let new_pctx = ProcessContext::from_ectx(ctx);
+                    Scheduler::update_last_running_pctx(&new_pctx);
+
+                    current_process.set_state(ProcessState::Blocked);
+                    
+                    // Clear Cpu tracker because the process is no longer running
+                    Cpu::current().clear_current_process();
+                }
+
                 dprintln!("[EXCEPTIONS] svc #0 from EL1 detected. starting scheduler...");
                 Scheduler::reset_timer();
                 Scheduler::schedule_next(ctx);

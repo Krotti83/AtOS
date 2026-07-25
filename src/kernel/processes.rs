@@ -84,6 +84,9 @@ pub enum ProcessState {
 #[allow(unused)]
 pub enum BlockReason {
     WaitingForChild,
+    Mutex,
+    AwaitingIO,
+    AwaitingSleepTimeout, // process went to sleep voluntarily for a fixed time
     // ... add more as needed
 }
 
