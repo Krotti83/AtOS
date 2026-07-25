@@ -5,6 +5,7 @@ use core::ptr::{read_volatile, write_volatile};
 
 use crate::kernel::arch::registers::Register;
 use crate::kernel::spinlock::Spinlock;
+use crate::println;
 
 // MMIO Base for BCM2837 (Raspberry Pi 3)
 const MMIO_BASE: usize = 0x3F00_0000 | 0xFFFF_FF80_0000_0000;
@@ -27,18 +28,21 @@ pub const GPPUD:     Register<u32> = Register::new(MMIO_BASE + 0x0020_0094);
 pub const GPPUDCLK0: Register<u32> = Register::new(MMIO_BASE + 0x0020_0098);
 
 pub struct Uart {
-    lock: Spinlock,
+    w_lock: Spinlock,
+    r_lock: Spinlock,
 }
 
 impl Uart {
     pub const fn new() -> Self {
         Self {
-            lock: Spinlock::new("uart_hardware_lock"),
+            w_lock: Spinlock::new("uart_write_lock"),
+            r_lock: Spinlock::new("uart_read_lock"),
         }
     }
 
     pub fn init(&self) {
-        self.lock.acquire();
+        self.w_lock.acquire();
+        self.r_lock.acquire();
 
         AUXENB.write(AUXENB.read() | 1); // enable mini-UART
         AUX_MU_CNTL_REG.write(0); // to disable t/r
@@ -61,11 +65,12 @@ impl Uart {
 
         AUX_MU_CNTL_REG.write(3); // enable t/r
 
-        self.lock.release();
+        self.r_lock.release();
+        self.w_lock.release();
     }
     
     pub fn write_byte(&self, c: u8) {
-        self.lock.acquire();
+        self.w_lock.acquire();
 
         // spin until transmit fifo can accept atleast one byte (bit 5 empty)
         while (AUX_MU_LSR_REG.read() & 0x20) == 0 {
@@ -73,32 +78,32 @@ impl Uart {
         }
         AUX_MU_IO_REG.write(c as u32);
 
-        self.lock.release();
+        self.w_lock.release();
     }
 
     pub fn read_byte(&self) -> u8 {
-        self.lock.acquire();
+        self.r_lock.acquire();
         while (AUX_MU_LSR_REG.read() & 0x01) == 0 {
             core::hint::spin_loop();
         }
         let byte = (AUX_MU_IO_REG.read() & 0xFF) as u8;
-        self.lock.release();
+        self.r_lock.release();
         byte
     }
 
     // Checks if a character is available in the FIFO.
     // Returns Some(u8) if data is ready, or None immediately if the FIFO is empty.
     pub fn poll_byte(&self) -> Option<u8> {
-        self.lock.acquire();
+        self.r_lock.acquire();
 
         if (AUX_MU_LSR_REG.read() & 0x01) == 0 {
-            self.lock.release();
+            self.r_lock.release();
             return None;
         }
 
         let byte = (AUX_MU_IO_REG.read() & 0xFF) as u8;
         
-        self.lock.release();
+        self.r_lock.release();
         Some(byte)
     }
 }
