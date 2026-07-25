@@ -1,10 +1,12 @@
 use core::panic;
 
 use crate::kernel::exceptions::ExceptionContext;
+use crate::kernel::peripherals::AUX_MU_LSR_REG;
+use crate::kernel::io::AWAITING_UART_READ;
 use crate::kernel::processes::{BlockReason, Cpu, MAX_PROCESSES, PROCESS_TABLE, ProcessContext, ProcessState};
 use crate::kernel::timer::PhysicalTimer;
 use crate::kernel::processes::Process;
-use crate::dprintln;
+use crate::{dprintln, println};
 use crate::the_end;
 
 pub static mut CURRENT_PROCESS: usize = 1; // last scheduled process index in process table
@@ -31,12 +33,31 @@ impl Scheduler {
     }
 
     pub fn schedule_next(ectx: &mut ExceptionContext) {
-        dprintln!("[SCHEDULER] Scheduling next process...");
-        if let Some(next_process) = Self::choose_next_process() {
-            Self::load_pctx(next_process, ectx);
-        } else {
-            dprintln!("[SCHEDULER] No process left to schedule!");
-            the_end();
+        loop {
+            dprintln!("[SCHEDULER] Scheduling next process...");
+            if let Some(next_process) = Self::choose_next_process() {
+                Self::load_pctx(next_process, ectx);
+                break
+            } else if Self::any_blocked().is_some() {
+                Self::awake_common_chans();
+                core::hint::spin_loop();
+            } else {
+                dprintln!("[SCHEDULER] No process left to schedule!");
+                the_end();
+            }
+        }
+    }
+
+    fn any_blocked() -> Option<Process> {
+        unsafe {
+            for i in 0..MAX_PROCESSES {
+                if let Some(process) = PROCESS_TABLE[i] {
+                    if process.state == ProcessState::Blocked {
+                        return Some(process);
+                    }
+                }
+            }
+            None
         }
     }
 
@@ -142,6 +163,12 @@ impl Scheduler {
                     }
                 }
             }
+        }
+    }
+
+    pub fn awake_common_chans() {
+        if (AUX_MU_LSR_REG.read() & 0x01) == 1 {
+            Self::wakeup(AWAITING_UART_READ);
         }
     }
 }

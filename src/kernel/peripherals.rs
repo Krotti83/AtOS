@@ -81,15 +81,22 @@ impl Uart {
         self.w_lock.release();
     }
 
-    pub fn read_byte(&self) -> u8 {
-        self.r_lock.acquire();
-        while (AUX_MU_LSR_REG.read() & 0x01) == 0 {
-            core::hint::spin_loop();
-        }
-        let byte = (AUX_MU_IO_REG.read() & 0xFF) as u8;
-        self.r_lock.release();
-        byte
-    }
+
+    /* obsolete function */
+    /* This function is unsafe from deadlocks and thus has been removed */
+    // pub fn read_byte(&self) -> u8 {
+    //     self.r_lock.acquire();
+    //     while (AUX_MU_LSR_REG.read() & 0x01) == 0 {
+    //         if let Some(current_process) = Scheduler::get_current_process() {
+    //             Scheduler::sleep(&AUX_MU_LSR_REG as *const _ as *const (), BlockReason::AwaitingIO);
+    //         } else {
+    //             core::hint::spin_loop();
+    //         }
+    //     }
+    //     let byte = (AUX_MU_IO_REG.read() & 0xFF) as u8;
+    //     self.r_lock.release();
+    //     byte
+    // }
 
     // Checks if a character is available in the FIFO.
     // Returns Some(u8) if data is ready, or None immediately if the FIFO is empty.

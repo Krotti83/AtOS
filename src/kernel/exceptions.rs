@@ -164,6 +164,8 @@ pub extern "C" fn handle_exception_el1(ctx: &mut ExceptionContext) {
 
     // println!("An exception has been detected :D").unwrap();
 
+    Scheduler::awake_common_chans();
+
     // handling the exception based on the type and source.
     match ctx.etype {
         ExceptionType::_SYNC => handle_sync_exception(ctx),

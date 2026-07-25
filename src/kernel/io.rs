@@ -3,11 +3,18 @@
 use core::fmt::{Arguments, Write};
 use crate::kernel::mutex::Mutex;
 use crate::kernel::peripherals::Uart;
+use crate::kernel::processes::BlockReason;
+use crate::kernel::scheduler::Scheduler;
 
 pub struct KernelIO {
     lock: Mutex,
     device: Uart,
 }
+
+// sleeping channels
+pub const AWAITING_UART_READ: *const () = 0xFFFF_FFFF_FFFF_FFFF as *const ();
+// awaiting write does not need a channel because write wait is insignificant, 
+// so it doesn't need sleeping
 
 unsafe impl Sync for KernelIO {}
 
@@ -28,7 +35,19 @@ impl KernelIO {
     pub fn getch(&self) -> u8 {
         loop {
             self.lock.acquire();
-            let c = self.device.read_byte();
+            let mut c: Option<u8>;
+            loop {
+                c = self.device.poll_byte();
+                if c.is_none() {
+                    self.lock.release();
+                    Scheduler::sleep(AWAITING_UART_READ, BlockReason::AwaitingIO);
+                    self.lock.acquire();
+                } else {
+                    break;
+                }
+            }
+
+            let c: u8 = c.unwrap();
 
             if c == 8 || c == 127 {
                 self.lock.release();
