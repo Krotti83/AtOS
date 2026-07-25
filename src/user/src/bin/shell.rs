@@ -14,10 +14,35 @@ const MAX_COMMANDS: usize = 8;
 
 const INPUT_SIZE: usize = 128;
 
+// spans are stored as u8 offsets into the input line, so the line can't be
+// longer than u8::MAX
+const _: () = assert!(INPUT_SIZE <= u8::MAX as usize);
+
+// a lightweight (start, len) pair into the input buffer, instead of a fat
+// &str (ptr + len), so argv doesn't cost 16 bytes per slot
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Token<'a> {
-    Word(&'a str),
+pub struct Span {
+    start: u8,
+    len: u8,
+}
+
+impl Span {
+    pub const fn empty() -> Self {
+        Self { start: 0, len: 0 }
+    }
+
+    pub fn as_str<'a>(&self, input: &'a str) -> &'a str {
+        let start = self.start as usize;
+        &input[start..start + self.len as usize]
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Token {
+    Word(Span),
     Pipe,
+    Semicolon,
+    Background,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,7 +63,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn next_token(&mut self) -> Result<Option<Token<'a>>, LexError> {
+    pub fn next_token(&mut self) -> Result<Option<Token>, LexError> {
         let bytes = self.input.as_bytes();
 
         // trim whitespaces
@@ -56,6 +81,16 @@ impl<'a> Lexer<'a> {
                 Ok(Some(Token::Pipe))
             }
 
+            b';' => {
+                self.pos += 1;
+                Ok(Some(Token::Semicolon))
+            }
+
+            b'&' => {
+                self.pos += 1;
+                Ok(Some(Token::Background))
+            }
+
             b'"' => {
                 self.pos += 1;
                 let start = self.pos;
@@ -67,48 +102,49 @@ impl<'a> Lexer<'a> {
                     return Err(LexError::UnterminatedString);
                 }
 
-                let word = &self.input[start..self.pos];
+                let span = Span { start: start as u8, len: (self.pos - start) as u8 };
                 self.pos += 1;
 
-                Ok(Some(Token::Word(word)))
+                Ok(Some(Token::Word(span)))
             }
 
             _ => {
                 let start = self.pos;
                 while self.pos < bytes.len() {
                     match bytes[self.pos] {
-                        b'|' | b'"' => break,
+                        b'|' | b'"' | b';' | b'&' => break,
                         c if c.is_ascii_whitespace() => break,
                         _ => self.pos += 1,
                     }
                 }
 
-                Ok(Some(Token::Word(&self.input[start..self.pos])))
+                let span = Span { start: start as u8, len: (self.pos - start) as u8 };
+                Ok(Some(Token::Word(span)))
             }
         }
     }
 }
 
-struct Command<'a> {
+struct Command {
     argc: usize,
-    argv: [&'a str; MAX_ARGS],
+    argv: [Span; MAX_ARGS],
 }
 
-pub struct ExecutionPipeline<'a> {
+pub struct ExecutionPipeline {
     count: usize,
-    commands: [Command<'a>; MAX_COMMANDS],
+    commands: [Command; MAX_COMMANDS],
 }
 
-impl<'a> Command<'a> {
+impl Command {
     pub const fn new() -> Self {
         Self {
             argc: 0,
-            argv: [""; MAX_ARGS],
+            argv: [Span::empty(); MAX_ARGS],
         }
     }
 }
 
-impl<'a> ExecutionPipeline<'a> {
+impl ExecutionPipeline {
     pub const fn new() -> Self {
         Self {
             count: 0,
@@ -126,17 +162,19 @@ pub enum ParserError {
 }
 
 pub struct Parser<'a> {
+    input: &'a str,
     lexer: Lexer<'a>,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
+            input,
             lexer: Lexer::new(input),
         }
     }
 
-    pub fn parse(&mut self) -> Result<ExecutionPipeline<'a>, ParserError> {
+    pub fn parse_and_run(&mut self) -> Result<(), ParserError> {
         let mut pipeline = ExecutionPipeline::new();
         let mut current = Command::new();
 
@@ -147,12 +185,12 @@ impl<'a> Parser<'a> {
             };
 
             match token {
-                Some(Token::Word(word)) => {
+                Some(Token::Word(span)) => {
                     if current.argc >= MAX_ARGS {
                         return Err(ParserError::TooManyArguments);
                     }
 
-                    current.argv[current.argc] = word;
+                    current.argv[current.argc] = span;
                     current.argc += 1;
                 }
 
@@ -171,6 +209,29 @@ impl<'a> Parser<'a> {
                     current = Command::new();
                 }
 
+                Some(Token::Semicolon) | Some(Token::Background) => {
+                    let background = matches!(token, Some(Token::Background));
+
+                    if current.argc == 0 {
+                        if pipeline.count > 0 {
+                            return Err(ParserError::EmptyCommand);
+                        }
+                    } else {
+                        if pipeline.count >= MAX_COMMANDS {
+                            return Err(ParserError::TooManyCommands);
+                        }
+
+                        pipeline.commands[pipeline.count] = current;
+                        pipeline.count += 1;
+                        current = Command::new();
+                    }
+
+                    if pipeline.count > 0 {
+                        execute_pipeline(&pipeline, background, self.input);
+                        pipeline = ExecutionPipeline::new();
+                    }
+                }
+
                 None => {
                     break;
                 }
@@ -178,40 +239,44 @@ impl<'a> Parser<'a> {
         }
 
         if current.argc == 0 {
-            return Err(ParserError::EmptyCommand);
+            if pipeline.count > 0 {
+                return Err(ParserError::EmptyCommand);
+            }
+        } else {
+            if pipeline.count >= MAX_COMMANDS {
+                return Err(ParserError::TooManyCommands);
+            }
+
+            pipeline.commands[pipeline.count] = current;
+            pipeline.count += 1;
         }
 
-        if pipeline.count >= MAX_COMMANDS {
-            return Err(ParserError::TooManyCommands);
+        if pipeline.count > 0 {
+            execute_pipeline(&pipeline, false, self.input);
         }
 
-        pipeline.commands[pipeline.count] = current;
-        pipeline.count += 1;
-
-        Ok(pipeline)
+        Ok(())
     }
 }
 
 // @Todo This needs a lot of work after we make the syscall api better.
 // That is why execs and forks are not utilised at the moment
-fn execute_command(command: &Command) {
+fn execute_command(command: &Command, background: bool, input: &str) {
     if command.argc == 0 {
         return;
     }
 
-    /*
-    let _ = println!("argc={}", command.argc);
-    for i in 0..command.argc {
-        let _ = println!("argv[{}]='{}'", i, command.argv[i]);
-}
-    */
-    
-    let program = command.argv[0];
-    let args = &command.argv[1..command.argc];
+    let program = command.argv[0].as_str(input);
 
     if program == "exit" {
         user::stdlib::syscalls::exit(0);
     }
+
+    let mut args: [&str; MAX_ARGS] = [""; MAX_ARGS];
+    for i in 1..command.argc {
+        args[i - 1] = command.argv[i].as_str(input);
+    }
+    let args = &args[..command.argc - 1];
 
     match fork() {
         Ok(0) => {
@@ -225,7 +290,11 @@ fn execute_command(command: &Command) {
 
         Ok(pid) => {
             // parent
-            let _ = wait(Some(pid));
+            if background {
+                let _ = println!("[{}] {}", pid, program);
+            } else {
+                let _ = wait(Some(pid));
+            }
         }
 
         Err(_) => {
@@ -234,9 +303,9 @@ fn execute_command(command: &Command) {
     }
 }
 
-fn execute_pipeline(pipeline: &ExecutionPipeline) {
+fn execute_pipeline(pipeline: &ExecutionPipeline, background: bool, input: &str) {
     for i in 0..pipeline.count {
-        execute_command(&pipeline.commands[i]);
+        execute_command(&pipeline.commands[i], background, input);
     }
 }
 
@@ -256,17 +325,10 @@ fn main() {
         };
         
         let mut parser = Parser::new(input);
-        match parser.parse() {
-            Ok(pipeline) => {
-                execute_pipeline(&pipeline);
-            }
-            
-            Err(e) => {
-                let _ = println!("parser error: {:?}", e);
-            }
+        if let Err(e) = parser.parse_and_run() {
+            let _ = println!("parser error: {:?}", e);
         }
     }
 }
 
 entry!(main);
-
