@@ -2,7 +2,7 @@
 A basic educational Operating System created in rust, for the Raspberry Pi 3+ Hardware
 
 ## Demo
-<video src="https://github.com/ZackyGameDev/AtOS/raw/refs/heads/main/demo.mp4" autoplay loop muted playsinline width="720"></video>
+<video src="https://github.com/user-attachments/assets/dc9853fb-4df9-4f4d-8793-552b7a235355" autoplay loop muted playsinline width="720"></video>
 
 ---
 
