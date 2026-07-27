@@ -2,7 +2,7 @@
 A basic educational Operating System created in rust, for the Raspberry Pi 3+ Hardware
 
 ## Demo
-<video src="demo.mp4" autoplay loop muted playsinline width="720"></video>
+<video src="https://github.com/ZackyGameDev/AtOS/raw/refs/heads/main/demo.mp4" autoplay loop muted playsinline width="720"></video>
 
 ---
 
@@ -203,10 +203,10 @@ Intro text format alongisde logo is stored in `atos_intro.txt`. `build.rs` gener
 
 This project exists to learn OS development through Rust on an ARM environment. And to help others also learn to achieve a similar task. All features of this OS are being documented in the guide book, in a implementation timeline order. An easy to follow beginner friendly manner to create an easy entry for people new to low level work.
 
---
+---
 
 ## Contribution
 
 Contributions are welcomed. New features or improvement of pre-existing features. Simple bug fixes/quality of life changes. Or even brand new user programs to try on AtOS. All are welcome. 
 
-<small>merge of PRs will of course be subject to review</small>
+<small> (merge is subject to review) </small>
