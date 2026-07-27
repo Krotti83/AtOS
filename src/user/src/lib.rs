@@ -1,6 +1,6 @@
 #![no_std]
 
-pub static INFO_PRINTS_ENABLED: bool = true;
+pub static INFO_PRINTS_ENABLED: bool = false;
 
 pub mod stdlib;
 
