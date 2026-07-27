@@ -8,7 +8,7 @@ use crate::kernel::processes::{BlockReason, Cpu, MAX_PROCESSES, PROCESS_TABLE, P
 use crate::kernel::spinlock::Spinlock;
 use crate::kernel::timer::PhysicalTimer;
 use crate::kernel::processes::Process;
-use crate::{dprintln, println};
+use crate::{dprintln};
 use crate::the_end;
 
 pub static mut CURRENT_PROCESS: usize = 1; // last scheduled process index in process table

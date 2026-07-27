@@ -6,12 +6,12 @@ use user::{entry_args, print, println};
 pub fn main(args: &[&str]) {
     for (i, arg) in args.iter().enumerate().skip(1) {
         if i > 1 {
-            print!(" ").unwrap();
+            print!(" ");
         }
-        print!("{}", arg).unwrap();
+        print!("{}", arg);
     }
 
-    println!("").unwrap();
+    println!("");
 }
 
 entry_args!(main);

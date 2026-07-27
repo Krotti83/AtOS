@@ -7,7 +7,7 @@ fn main() {
     
     if let Ok((pid, _)) = get_p_info() {
         if pid != 1 {
-            println!("spawning 'init' program from user space is not permitted! 'init' program is quitting...").unwrap();
+            println!("spawning 'init' program from user space is not permitted! 'init' program is quitting...");
             exit(1);
         }
     }

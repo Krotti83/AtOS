@@ -27,7 +27,7 @@ pub fn main() {
         }
     }
 
-    println!("{} {} {}", lines, words, bytes).unwrap();
+    println!("{} {} {}", lines, words, bytes);
 }
 
 entry!(main);

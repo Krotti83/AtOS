@@ -29,7 +29,7 @@ macro_rules! print_meta { () => {
         let mut ppid: u64;
         (pid, ppid) = user::stdlib::syscalls::get_p_info().unwrap();
     
-        user::println!("new process spawned with PID: {}, from parent PID: {}", pid, ppid).unwrap();
+        user::println!("new process spawned with PID: {}, from parent PID: {}", pid, ppid);
     }
 
 };}
@@ -62,14 +62,14 @@ macro_rules! runtime_panic_handler { () => {
     use core::panic::PanicInfo;
     #[panic_handler]
     fn panic(info: &PanicInfo) -> ! {
-        user::println!("-----------PANIC------------").unwrap();
+        user::println!("-----------PANIC------------");
         if let Some(location) = info.location() {
-            user::println!("Location: {}:{}:{}", location.file(), location.line(), location.column()).unwrap();
+            user::println!("Location: {}:{}:{}", location.file(), location.line(), location.column());
         } else {
-            user::println!("Location: Unknown location").unwrap();
+            user::println!("Location: Unknown location");
         }
-        user::println!("Message:  {}", info.message()).unwrap();
-        user::println!("----------------------------").unwrap();
+        user::println!("Message:  {}", info.message());
+        user::println!("----------------------------");
 
         user::stdlib::syscalls::exit(1);
     }
