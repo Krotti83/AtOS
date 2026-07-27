@@ -19,15 +19,16 @@ impl FileSystem {
     pub fn read_file(file_name: &str) -> Option<&'static [u8]> {
         match file_name {
             "init" => Some(include_bytes!("../user/build/init")),
-            "b" => Some(include_bytes!("../user/build/b")),
-            "a" => Some(include_bytes!("../user/build/a")),
+            "waittest" => Some(include_bytes!("../user/build/waittest")),
+            "ptest" => Some(include_bytes!("../user/build/ptest")),
             "echo" => Some(include_bytes!("../user/build/echo")),
             "wc" => Some(include_bytes!("../user/build/wc")),
             "tetris" => Some(include_bytes!("../user/build/tetris")),
             "clear" => Some(include_bytes!("../user/build/clear")),
             "info" => Some(include_bytes!("../user/build/info")),
-            "c" => Some(include_bytes!("../user/build/c")),
+            "exectest" => Some(include_bytes!("../user/build/exectest")),
             "shell" => Some(include_bytes!("../user/build/shell")),
+            "help" => Some(include_bytes!("../user/build/help")),
             _ => None,
         }
     }

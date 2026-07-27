@@ -272,6 +272,11 @@ fn execute_command(command: &Command, background: bool, input: &str) {
         user::stdlib::syscalls::exit(0);
     }
 
+    if ["ls", "cd", "mkdir", "rmdir", "rm", "cat", "touch"].contains(&program) {
+        println!("{}: command not found (filesystem commands will be implemented in the future)", program);
+        return;
+    }
+
     let mut args: [&str; MAX_ARGS] = [""; MAX_ARGS];
     for i in 1..command.argc {
         args[i - 1] = command.argv[i].as_str(input);

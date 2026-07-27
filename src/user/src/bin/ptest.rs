@@ -5,8 +5,8 @@ use user::{entry_args, println, stdlib::syscalls::{fork, wait}};
 use user::stdlib::syswraps::spawn;
 
 fn main(args: &[&str]) {
-    println!("hello this code is running in the 'a' program!");
-    println!("args passed to 'a' program: {:?}", args);
+    println!("hello this code is running in the 'ptest' program!");
+    println!("args passed to 'ptest' program: {:?}", args);
 
     let mut x = 1;
     println!("x = {}", x);
@@ -14,10 +14,10 @@ fn main(args: &[&str]) {
     println!("x = {}", x);
 
     for i in 0..20 {
-        println!("'a' program is working, iteration {}", i);
+        println!("'ptest' program is working, iteration {}", i);
     }
 
-    println!("'a' program will now fork and wait for the child to finish.");
+    println!("'ptest' program will now fork and wait for the child to finish.");
     match fork() {
         Ok(fc) => {
             if fc == 0 {
@@ -36,8 +36,8 @@ fn main(args: &[&str]) {
                     }
                 }
                 println!("parent will now exit.");
-                println!("before exiting, spawning process c for next test.");
-                spawn("c", &[]).unwrap();
+                println!("before exiting, spawning process waittest for next test.");
+                spawn("waittest", &[]).unwrap();
             }
         }
         Err(_) => {
