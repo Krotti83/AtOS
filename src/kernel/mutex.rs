@@ -32,11 +32,7 @@ impl Mutex {
     pub fn acquire(&self) {
         self.guard.acquire();
         while self.lock.get() {
-            // We pass the address of this specific mutex instance as unique wait channel
-            // This is the kind of code that keeps you up at night.
-            self.guard.release();
-            Scheduler::sleep(self as *const Mutex as *const (), BlockReason::Mutex);
-            self.guard.acquire();
+            Scheduler::sleep_for_mutex(self, &self.guard);
         }
         self.lock.set(true);
         if let Some(proc) = Process::get_current() {

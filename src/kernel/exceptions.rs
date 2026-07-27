@@ -1,6 +1,7 @@
 use crate::kernel::kernelstack::KernelStack;
 use crate::kernel::processes::{Cpu, ProcessContext, ProcessState};
 use crate::kernel::scheduler::Scheduler;
+use crate::kernel::spinlock::Spinlock;
 use crate::{dprintln, println};
 use crate::kernel::syscalls;
 use crate::kernel::interrupts::{Interrupts, InterruptSource};
@@ -111,6 +112,17 @@ fn handle_sync_exception(ctx: &mut ExceptionContext) -> () {
                     
                     // Clear Cpu tracker because the process is no longer running
                     Cpu::current().clear_current_process();
+
+                    if ctx.x[0] == 0xDEAD { // if sleep due to mutex wait, then release guard
+                        let guard_ptr = ctx.x[1] as *const Spinlock;
+                        if !guard_ptr.is_null() {
+                            unsafe {
+                                (*guard_ptr).release();
+                            }
+                        } else {
+                            panic!("Mutex guard pointer is null in sleep_for_mutex!");
+                        }
+                    }
                 }
 
                 dprintln!("[EXCEPTIONS] svc #0 from EL1 detected. starting scheduler...");

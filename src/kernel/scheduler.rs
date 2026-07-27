@@ -1,9 +1,11 @@
 use core::panic;
 
 use crate::kernel::exceptions::ExceptionContext;
+use crate::kernel::mutex::Mutex;
 use crate::kernel::peripherals::AUX_MU_LSR_REG;
 use crate::kernel::io::AWAITING_UART_READ;
 use crate::kernel::processes::{BlockReason, Cpu, MAX_PROCESSES, PROCESS_TABLE, ProcessContext, ProcessState};
+use crate::kernel::spinlock::Spinlock;
 use crate::kernel::timer::PhysicalTimer;
 use crate::kernel::processes::Process;
 use crate::{dprintln, println};
@@ -146,6 +148,26 @@ impl Scheduler {
             }
 
             core::arch::asm!("svc #0");
+        }
+    }
+
+    pub fn sleep_for_mutex(mutex: &Mutex, guard: &Spinlock) {
+        unsafe {
+            if let Some(current_process) = &mut PROCESS_TABLE[CURRENT_PROCESS] {
+                current_process.block_reason = Some(BlockReason::Mutex);
+
+                // We pass the address of this specific mutex instance as unique wait channel
+                // This is the kind of code that keeps you up at night.
+                current_process.chan = mutex as *const Mutex as *const () as u64;
+            } else {
+                panic!("Scheduler::sleep_for_mutex() was called when no process was active!");
+            }
+
+            core::arch::asm!("svc #0", 
+                              in("x0") 0xDEAD as u64,
+                              in("x1") guard as *const Spinlock as u64,);
+
+            guard.acquire();
         }
     }
 
