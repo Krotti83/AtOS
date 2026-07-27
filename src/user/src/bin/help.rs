@@ -20,6 +20,7 @@ pub fn main(args: &[&str]) {
         println!("  exectest - A test program for executing other programs");
         println!("  wc - Count lines, words, and bytes in input");
         println!("  tetris - Play a game of Tetris on AtOS");
+        println!("  exit - Exit the shell (implemented in shell itself)");
         println!("Filesystem related commands will be implemented later with filesystem itself.");
         println!("\nAvailable syntax for commands/programs:");
         println!(" command [arguments] - Execute a command with optional arguments");
@@ -80,6 +81,11 @@ pub fn main(args: &[&str]) {
             "tetris" => println!("\
                 [tetris] \
             \n| Play a game of Tetris on AtOS! \
+            "),
+            "exit" => println!("\
+                [exit] \
+            \n| Exit the shell. This command is implemented in the shell itself, not as \
+            \n| a separate program. \
             "),
             _ => println!("Unknown command/program: {}", command),
         }
