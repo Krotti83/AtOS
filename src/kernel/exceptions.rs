@@ -89,6 +89,10 @@ macro_rules! unhandled_exception {
     ($ctx:expr) => {{
         println!("Unhandled exception detected!");
         print_exception_context($ctx);
+        println!("System halted due to unhandled exception.");
+        loop {
+            core::hint::spin_loop();
+        }
     }};
 }
 
