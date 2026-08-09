@@ -4,6 +4,9 @@ target = "aarch64-unknown-none"
 [target.aarch64-unknown-none]
 linker = "aarch64-linux-gnu-ld"
 rustflags = [
+  "-C", "link-arg=--fix-cortex-a53-835769",
+  "-C", "link-arg=--fix-cortex-a53-843419",
+  "-C", "target-cpu=cortex-a53",
   "-C", "link-arg=-Tlinker.ld",
 ]
 
