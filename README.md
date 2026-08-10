@@ -1,5 +1,5 @@
 # AtOS
-A basic educational Operating System created in baremetal Rust, for the Raspberry Pi 3+ Hardware.
+A basic educational operating system written in baremetal Rust for Raspberry Pi 3+ hardware, accompanied by a [step-by-step textbook](https://zackygamedev.github.io/RustOSGuideforRPi3/) that teaches you how to build your own operating system from scratch.
 
 ## Demo
 <video src="https://github.com/user-attachments/assets/dc9853fb-4df9-4f4d-8793-552b7a235355" autoplay loop muted playsinline width="100%"></video>
@@ -15,6 +15,7 @@ AtOS was built in order to learn about OS development, and low level programming
 ---
 
 ## Guide Book
+<img width="1869" height="906" alt="image" src="https://github.com/user-attachments/assets/167dcfe5-133c-4fb8-b886-fc49934a4fef" />
 
 There is a fully documented guide book written on AtOS development. It aims to help others to also build a basic OS in Rust for the Raspberry Pi hardware. Which may also help in ARM low level development.
 
