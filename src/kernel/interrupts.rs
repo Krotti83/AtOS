@@ -116,7 +116,7 @@ impl Interrupts {
 
     // Reads to check if IRQs are masked. Returns true if interrupts are
     // currently enabled.
-    pub fn irq_enabled() -> bool {
+    pub fn is_irq_enabled() -> bool {
         let daif: u64;
         unsafe {
             core::arch::asm!("mrs {}, DAIF",
@@ -148,7 +148,7 @@ impl Interrupts {
     // doesn't just toggle blindly. Each push_off matches a pop_off. If
     // interrupts were originally off, these functions keep them off.
     pub fn push_off() {
-        let enabled = Self::irq_enabled();
+        let enabled = Self::is_irq_enabled();
         Self::irq_disable();
 
         let c = mycpu();
@@ -161,7 +161,7 @@ impl Interrupts {
     pub fn pop_off() {
         let c = mycpu();
 
-        if Self::irq_enabled() {
+        if Self::is_irq_enabled() {
             panic!("pop_off: interrupts active when they should be masked");
         }
 
