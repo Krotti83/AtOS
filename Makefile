@@ -12,6 +12,9 @@ USER_DIR = src/user
 # Default target
 all: kernel8.img
 
+installapt:
+	sudo apt update && sudo apt install qemu-system-arm qemu-utils -y
+
 # Build user programs
 user:
 	$(MAKE) -C $(USER_DIR)
