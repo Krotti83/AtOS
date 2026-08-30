@@ -198,12 +198,18 @@ impl PageAllocator {
 
         let entry_point = header.entry;
         // set stack top to just above the highest allocated program segment 16-byte aligned
-        let stack_top: u64 = (max_allocated_addr + 0x16000) & !0xf; 
+
+        // Page align stack
+        if (max_allocated_addr % 4096) != 0 {
+            max_allocated_addr += 4096 - (max_allocated_addr % 4096);
+        }
+
+        let stack_top: u64 = (max_allocated_addr + 0x16000);
 
         // giving the user stack 14 pages. with unallocated gaurd page between stack area and everythign else.
 
         for i in 0..14 {
-            let stack_page_va = stack_top - (i * 4096) - 1;
+            let stack_page_va = stack_top - (i * 4096);
             Self::alloc_page(stack_page_va as usize, Some(ttbr0));
         }
 
