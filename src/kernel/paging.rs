@@ -489,6 +489,7 @@ impl PageAllocator {
         const PXN: u64 = 1 << 53; // don't try to run user space code in el1!!
         // const UXN: u64 = 1 << 54;
         const NG: u64 = 1 << 11;
+        const NORMAL: u64 = 1 << 2;
 
         // trailing to the l3 entry with checks, but if any entry is invalid, we allocate a new page table for it and continue
         unsafe {
@@ -512,7 +513,7 @@ impl PageAllocator {
             let l3_entry = (*l3).entry[l3_i];
             if l3_entry & 0b11 != 0b11 { 
                 Self::get_free_frame_pa().map(|frame| {
-                    (*l3).entry[l3_i] = frame as u64 | VALID | PAGE | AP_EL0_RW | SH_INNER | AF | PXN | NG; // valid, table
+                    (*l3).entry[l3_i] = frame as u64 | VALID | PAGE | NORMAL | AP_EL0_RW | SH_INNER | AF | PXN | NG; // valid, table
                 }).expect("No free frames available for new page table entry");
             } else {
                 panic!("Page already allocated at va: {:#x}", va);
