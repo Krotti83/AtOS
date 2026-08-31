@@ -11,6 +11,7 @@ use crate::kernel::{
     processes::MAX_PROCESSES,
     // spinlock::Spinlock,
     paging::{PageAllocator, PageTable, PAGE_TABLE_KERNEL_L1},
+    mmu::{TLBMaintenance, TLBLevel, TLBGranuleSize, TLBShareability},
 };
 
 use crate::{dprintln, ttbr1_to_pa};
@@ -122,6 +123,7 @@ impl KernelStack {
                     for page_idx in 1..total_pages { // zero page is not allocated to defend from stack overflow.
                         let page_va = kernel_stack_start + (page_idx * 4096);
                         PageAllocator::alloc_page(page_va as usize, Some(ttbr1_to_pa!(core::ptr::addr_of!(PAGE_TABLE_KERNEL_L1)) as u64));
+                        TLBMaintenance::invalidate_va_all_asid(TLBGranuleSize::_4KB, TLBLevel::Level3, TLBShareability::Inner, page_va);
                     }
 
                     let kernel_stack_top = kernel_stack_start + (KERNEL_STACK_SIZE as u64); 
