@@ -204,7 +204,7 @@ impl PageAllocator {
             max_allocated_addr += 4096 - (max_allocated_addr % 4096);
         }
 
-        let stack_top: u64 = (max_allocated_addr + 0x16000);
+        let stack_top: u64 = max_allocated_addr + 0x16000;
 
         // giving the user stack 14 pages. with unallocated gaurd page between stack area and everythign else.
 
