@@ -14,3 +14,4 @@ pub mod io;
 pub mod arch;
 pub mod filesystem;
 pub mod kernelstack;
+pub mod mmu;
